@@ -13,6 +13,18 @@ function reload {
    }
 }
 
+Write-Host "Installing visual studio build tools..." -ForegroundColor Cyan
+# Visual Studio build tools
+$exePath = "$env:TEMP\vs.exe"
+
+Invoke-WebRequest -Uri https://aka.ms/vs/17/release/vs_BuildTools.exe -UseBasicParsing -OutFile $exePath
+
+Start-Process $exePath -ArgumentList "--layout .\vs_BuildTools" -Wait
+
+cd vs_BuildTools
+
+Start-Process vs_setup.exe -ArgumentList "--nocache --wait --noUpdateInstaller --noWeb --allWorkloads --includeRecommended --includeOptional --quiet --norestart" -Wait
+
 # ---- Flutter installation
 Write-Host "Installing Flutter..." -ForegroundColor Cyan
 $zipFile = "$env:TEMP\flutter.zip"
@@ -39,22 +51,21 @@ Write-Host "Downloading..."
 (New-Object Net.WebClient).DownloadFile('https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-windows-x86_64.msi', $exePath)
 
 Write-Host "Installing..."
-#msiexec.exe /i $exePath ADD_CMAKE_TO_PATH=User /qn | Out-Null
 Start-Process msiexec.exe -ArgumentList "/i $exePath ADD_CMAKE_TO_PATH=User /qn" -Wait
 
 reload
 
 cmake --version
 
+# Git installation
+Write-Host "Installing git..." -ForegroundColor Cyan
+
 $exePath = "$env:TEMP\git.exe"
 
-# Download git installer
 Invoke-WebRequest -Uri https://github.com/git-for-windows/git/releases/download/v2.37.1.windows.1/Git-2.37.1-64-bit.exe -UseBasicParsing -OutFile $exePath
 
-# Execute git installer
 Start-Process $exePath -ArgumentList '/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh"' -Wait
 
-# Optional: For bash.exe, add 'C:\Program Files\Git\bin' to PATH
 [Environment]::SetEnvironmentVariable('Path', "$([Environment]::GetEnvironmentVariable('Path', 'Machine'));C:\Program Files\Git\bin", 'Machine')
 
 reload
@@ -84,11 +95,13 @@ rustup --version
 rustc --version
 
 # VCPKG
+Write-Host "Installing vcpkg..." -ForegroundColor Cyan
 
 git clone https://github.com/Microsoft/vcpkg.git C:\src\vcpkg
 
 C:\src\vcpkg\bootstrap-vcpkg.bat
 
+C:\src\vcpkg\vcpkg.exe --version
 C:\src\vcpkg\vcpkg.exe install gtest
 C:\src\vcpkg\vcpkg.exe install ffmpeg
 
